@@ -34,6 +34,19 @@ CREATE TABLE IF NOT EXISTS tech_articles (
   content TEXT
 );
 
+-- tech_articlesのインデックスを作成
+CREATE INDEX IF NOT EXISTS idx_tech_articles_title ON tech_articles
+  USING pgroonga (title)
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150');
+
+CREATE INDEX IF NOT EXISTS idx_tech_articles_content ON tech_articles
+  USING pgroonga (content)
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150');
+
+CREATE INDEX IF NOT EXISTS idx_tech_articles_all ON tech_articles
+  USING pgroonga ((title || ' ' || content))
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150');
+
 -- blog_postsテーブルを作成
 CREATE TABLE IF NOT EXISTS blog_posts (
   id SERIAL PRIMARY KEY,
@@ -45,3 +58,54 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   view_count INTEGER DEFAULT 0,
   lang VARCHAR(5) DEFAULT 'ja'
 );
+
+-- blog_postsのインデックスを作成
+CREATE INDEX IF NOT EXISTS idx_blog_posts_title ON blog_posts
+  USING pgroonga (title)
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150');
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_content ON blog_posts
+  USING pgroonga (content)
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150');
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_tags ON blog_posts
+  USING GIN (tags);
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_view_count ON blog_posts (view_count DESC);
+
+-- ページネーション用の複合インデックス
+CREATE INDEX IF NOT EXISTS idx_blog_posts_pagination ON blog_posts 
+  (published_at DESC, id DESC);
+
+-- スコア順ページネーション用の複合インデックス
+CREATE INDEX IF NOT EXISTS idx_score_date ON blog_posts 
+  USING btree (view_count DESC, published_at DESC, id DESC);
+
+-- 多言語検索用の部分インデックス
+CREATE INDEX IF NOT EXISTS idx_blog_posts_content_ja ON blog_posts 
+  USING pgroonga (content) 
+  WITH (tokenizer='TokenMecab', normalizer='NormalizerNFKC150')
+  WHERE lang = 'ja';
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_content_en ON blog_posts 
+  USING pgroonga (content) 
+  WITH (tokenizer='TokenBigram', normalizer='NormalizerNFKC150')
+  WHERE lang = 'en';
+
+CREATE INDEX IF NOT EXISTS idx_blog_posts_content_zh ON blog_posts 
+  USING pgroonga (content) 
+  WITH (tokenizer='TokenBigram', normalizer='NormalizerNFKC150')
+  WHERE lang = 'zh';
+
+-- articlesテーブルを作成（ノーマライザー例用）
+CREATE TABLE IF NOT EXISTS articles (
+  id SERIAL PRIMARY KEY,
+  content TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_with_normalizer ON articles
+  USING pgroonga (content)
+  WITH (
+    tokenizer='TokenMecab',
+    normalizer='NormalizerNFKC150'
+  );
