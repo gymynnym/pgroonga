@@ -14,7 +14,7 @@ PostgreSQL 17 + PGroonga + MeCabによる高精度な日本語全文検索環境
 
 ```bash
 # リポジトリをクローン
-git clone <repository-url>
+git clone https://github.com/okamyuji/pgroonga.git
 cd pgroonga
 
 # コンテナを起動（初回は10-15分かかります）
