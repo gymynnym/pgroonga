@@ -1,14 +1,11 @@
-# ビルドステージ
-FROM postgres:17-alpine AS builder
+FROM postgres:18-alpine AS builder
 
 ENV PGROONGA_VERSION=4.0.4 \
-    GROONGA_VERSION=15.1.7 \
-    MECAB_VERSION=0.996.12 \
-    MECAB_IPADIC_VERSION=2.7.0-20070801
+    GROONGA_VERSION=15.2.0 \
+    MECAB_KO_VERSION=0.996-ko-0.9.2 \
+    MECAB_KO_DIC_VERSION=2.1.1-20180720
 
-COPY alpine/build.sh /
-RUN chmod +x /build.sh && \
-  apk add --no-cache \
+RUN apk add --no-cache \
     apache-arrow-dev \
     build-base \
     clang19-dev \
@@ -26,17 +23,18 @@ RUN chmod +x /build.sh && \
     xsimd-dev \
     xxhash-dev \
     zlib-dev \
-    zstd-dev && \
-  /build.sh ${PGROONGA_VERSION} ${GROONGA_VERSION} ${MECAB_VERSION} ${MECAB_IPADIC_VERSION}
+    zstd-dev
 
-# 実行ステージ
-FROM postgres:17-alpine
+COPY alpine/build.sh /
+RUN chmod +x /build.sh && \
+  /build.sh ${PGROONGA_VERSION} ${GROONGA_VERSION} ${MECAB_KO_VERSION} ${MECAB_KO_DIC_VERSION}
+
+FROM postgres:18-alpine
 
 ENV PGROONGA_VERSION=4.0.4 \
-    GROONGA_VERSION=15.1.7 \
+    GROONGA_VERSION=15.2.0 \
     LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
-# ランタイム依存関係のインストール
 RUN apk add --no-cache \
     libarrow \
     libgomp \
@@ -45,7 +43,6 @@ RUN apk add --no-cache \
     zlib \
     zstd
 
-# ビルドステージからMeCab、Groonga、PGroongaをコピー
 COPY --from=builder /usr/local/lib/libmecab* /usr/local/lib/
 COPY --from=builder /usr/local/lib/libgroonga* /usr/local/lib/
 COPY --from=builder /usr/local/lib/groonga /usr/local/lib/groonga
@@ -56,3 +53,4 @@ COPY --from=builder /usr/local/bin/mecab* /usr/local/bin/
 COPY --from=builder /usr/local/bin/groonga* /usr/local/bin/
 COPY --from=builder /usr/local/bin/grn* /usr/local/bin/
 COPY --from=builder /usr/local/etc/mecabrc /usr/local/etc/
+
